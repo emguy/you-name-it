@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+
+#NOTE: This program is free software; you can redistribute it 
+#and/or modify it under the terms of the GNU General Public 
+#License as published by the Free Software Foundation; either 
+#version 3, or (at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#GNU General Public License for more details.
+
+#Bugs can be reported to Yu Zhang <zhang235@mcmaster.ca>.
+
+BEFORE_FILE="younameit.before"
+AFTER_FILE="younameit.after"
+TMP_FILE="younameit.tmp"
+
+# check awk
+type awk > /dev/null 2>&1 || 
+{ 
+    echo >&2 "Program awk is not found. Script terminated!"
+    exit 1
+}
+# check vim
+type vim > /dev/null 2>&1 || 
+{ 
+    echo >&2 "Editor vim is not found. Script terminated!"
+    exit 1
+}
+
+# create of overwrite the file including file list
+touch $BEFORE_FILE
+echo "# list of file names before changes are made:" > $BEFORE_FILE
+touch $AFTER_FILE
+echo "# put down the file names that you want to change to:" > $AFTER_FILE
+
+if (( $# == 0 )); then
+    ls -l | awk '{print $9}' >> $BEFORE_FILE
+    ls -l | awk '{print $9}' >> $AFTER_FILE
+else
+    for ARG in $@
+    do
+        if [ ! -e  $arg ]; then 
+            echo "The file \"$ARG\" does not exsit in current directory. Omitted."  
+        else
+            echo $ARG >> $BEFORE_FILE
+            echo $ARG >> $AFTER_FILE
+        fi
+    done
+fi
+
+# start vim
+vim $AFTER_FILE "-c silent vsp $BEFORE_FILE" "-c silent set number" "-c silent wincmd l" "-c silent set number"
+# trim empty and header lines
+
+awk 'NF && $1!~/^\#/' $BEFORE_FILE > $TMP_FILE && mv $TMP_FILE $BEFORE_FILE
+awk 'NF && $1!~/^\#/' $AFTER_FILE  > $TMP_FILE && mv $TMP_FILE $AFTER_FILE
+
+if (( $? == 0 )); then
+    exec 6<$BEFORE_FILE
+    while read -r AFTER_LINE; do
+        read -r BEFORE_LINE <&6
+        if [ ! -e $BEFORE_LINE ]; then
+            echo "Source file \"$BEFORE_LINE\" does not exsit in current directory."
+            echo "Omit current file!"
+            continue
+        fi
+        if [ -e $AFTER_LINE ]; then
+            echo "Target file \"$AFTER_LINE\" already exsit in current directory."
+            echo "No action is performed for \"$BEFORE_LINE\"!"
+            continue
+        fi
+        mv -iv $BEFORE_LINE $AFTER_LINE
+    done <$AFTER_FILE
+else
+    echo "Script excution failed."
+    exit 1
+fi
+
+rm -f $AFTER_FILE $BEFORE_FILE
+exit 0
+
