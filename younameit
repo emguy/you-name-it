@@ -16,14 +16,36 @@ BEFORE_FILE="younameit.before"
 AFTER_FILE="younameit.after"
 TMP_FILE="younameit.tmp"
 
+MV_CMD="mv"
+CP_CMD="cp"
+RM_CMD="rm -f"
+VIM_CMD="vim"
+AWK_CMD="awk"
+
+FLAG_COPY=false
+FLAG_FORCE=false
+FLAG_QUIET=false
+
+OPTION_VERBOSE="-v"
+OPTION_FORCE=""
+
+VERSION="$(basename $0), version 0.12"
+USEAGE="usage: $(basename $0) [-hfqC] files_names ... \n
+\n
+        \t-h\tshow this help text \n
+        \t-v\tshow verion imformation \n
+        \t-f\tallow overwriting \n
+        \t-q\tquiet mode which suppresses all console messages
+"
+
 # check awk
-type awk > /dev/null 2>&1 || 
+type $AWK_CMD > /dev/null 2>&1 || 
 { 
     echo >&2 "Program awk is not found. Script terminated!"
     exit 1
 }
 # check vim
-type vim > /dev/null 2>&1 || 
+type $VIM_CMD > /dev/null 2>&1 || 
 { 
     echo >&2 "Editor vim is not found. Script terminated!"
     exit 1
@@ -35,14 +57,47 @@ echo "# list of file names before changes are made:" > $BEFORE_FILE
 touch $AFTER_FILE
 echo "# put down the file names that you want to change to:" > $AFTER_FILE
 
+# parse command line options
+while getopts "Cqh?fv" OPTS; do
+    case $OPTS in
+       C) 
+           FLAG_COPY=true
+           ;;
+       f) 
+           FLAG_FORCE=true
+           OPTION_FORCE="-f"
+           ;;
+       q) 
+           FLAG_QUIET=true
+           OPTION_VERBOSE=""
+           ;;
+       v) 
+           echo $VERSION
+           exit 0
+           ;;
+       h|\?) 
+           echo $VERSION
+           echo 
+           echo -e $USEAGE
+           exit 0
+           ;;
+    esac
+done
+
+# handle command line arguments
 if (( $# == 0 )); then
-    ls -l | awk '{print $9}' >> $BEFORE_FILE
-    ls -l | awk '{print $9}' >> $AFTER_FILE
+    ls -l | $AWK_CMD '{print $9}' >> $BEFORE_FILE
+    ls -l | $AWK_CMD '{print $9}' >> $AFTER_FILE
 else
     for ARG in $@
     do
-        if [ ! -e  $arg ]; then 
-            echo "The file \"$ARG\" does not exsit in current directory. Omitted."  
+        if [ "-" == ${ARG:0:1} ]; then continue
+        fi
+
+        if [ ! -e $ARG ]; then 
+            if [ "true" != $FLAG_QUIET ]; then 
+                echo "The file \"$ARG\" does not exist in current directory. Omitted."  
+            fi 
         else
             echo $ARG >> $BEFORE_FILE
             echo $ARG >> $AFTER_FILE
@@ -51,33 +106,64 @@ else
 fi
 
 # start vim
-vim $AFTER_FILE "-c silent vsp $BEFORE_FILE" "-c silent set number" "-c silent wincmd l" "-c silent set number"
-# trim empty and header lines
+$VIM_CMD $AFTER_FILE "-c silent vsplit $BEFORE_FILE" \
+                     "-c silent set number" \
+                     "-c silent wincmd l" \
+                     "-c silent set number"
 
-awk 'NF && $1!~/^\#/' $BEFORE_FILE > $TMP_FILE && mv $TMP_FILE $BEFORE_FILE
-awk 'NF && $1!~/^\#/' $AFTER_FILE  > $TMP_FILE && mv $TMP_FILE $AFTER_FILE
+if (( $? != 0 )); then
+    echo "Error when exiting vim. Abort!"
+    exit 1;
+fi
+
+# trim empty and header lines
+$AWK_CMD 'NF && $1!~/^\#/' $BEFORE_FILE > $TMP_FILE && $MV_CMD $TMP_FILE $BEFORE_FILE
+$AWK_CMD 'NF && $1!~/^\#/' $AFTER_FILE  > $TMP_FILE && $MV_CMD $TMP_FILE $AFTER_FILE
 
 if (( $? == 0 )); then
     exec 6<$BEFORE_FILE
     while read -r AFTER_LINE; do
         read -r BEFORE_LINE <&6
         if [ ! -e $BEFORE_LINE ]; then
-            echo "Source file \"$BEFORE_LINE\" does not exsit in current directory."
-            echo "Omit current file!"
+            if [ "true" != $FLAG_QUIET ]; then 
+                echo "Source file \"$BEFORE_LINE\" does not exist in current directory."
+                echo "Omit current file!"
+            fi
             continue
         fi
         if [ -e $AFTER_LINE ]; then
-            echo "Target file \"$AFTER_LINE\" already exsit in current directory."
-            echo "No action is performed for \"$BEFORE_LINE\"!"
-            continue
+            if [ "true" != $FLAG_QUIET ]; then 
+                echo "Target file \"$AFTER_LINE\" already exists in current directory."
+            fi
+            if [ "false" == $FLAG_FORCE ]; then
+                if [ "true" != $FLAG_QUIET ]; then 
+                    echo "No action is performed for \"$BEFORE_LINE\"!"
+                fi
+                continue
+            else
+                if [ "true" != $FLAG_QUIET ]; then 
+                    echo "Target file \"$AFTER_LINE\" is overwritten by \"$BEFORE_LINE\"!"
+                fi
+            fi
         fi
-        mv -iv $BEFORE_LINE $AFTER_LINE
+
+        if [ "true" == $FLAG_COPY ]; then
+            $CP_CMD $OPTION_VERBOSE $OPTION_FORCE $BEFORE_LINE $AFTER_LINE
+        else
+            $MV_CMD $OPTION_VERBOSE $OPTION_FORCE $BEFORE_LINE $AFTER_LINE
+        fi
+
     done <$AFTER_FILE
 else
-    echo "Script excution failed."
+    if [ "true" != $FLAG_QUIET ]; then 
+        echo "Script execution failed."
+    fi
     exit 1
 fi
 
-rm -f $AFTER_FILE $BEFORE_FILE
+if [ "true" != $FLAG_QUIET ]; then 
+    echo "Removing temporary files ..."
+fi
+$RM_CMD $OPTION_VERBOSE $AFTER_FILE $BEFORE_FILE $TMP_FILE
 exit 0
 
