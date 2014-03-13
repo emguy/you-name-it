@@ -14,13 +14,11 @@
 
 BEFORE_FILE="younameit.before"
 AFTER_FILE="younameit.after"
-TMP_FILE="younameit.tmp"
 
 MV_CMD="mv"
-CP_CMD="cp"
+CP_CMD="cp" 
 RM_CMD="rm -f"
 VIM_CMD="vim"
-AWK_CMD="awk"
 
 FLAG_COPY=false
 FLAG_FORCE=false
@@ -31,31 +29,29 @@ OPTION_FORCE=""
 
 VERSION="$(basename $0), version 0.12"
 USEAGE="usage: $(basename $0) [-hfqC] files_names ... \n
-\n
+        \n
         \t-h\tshow this help text \n
         \t-v\tshow verion imformation \n
         \t-f\tallow overwriting \n
         \t-q\tquiet mode which suppresses all console messages
 "
 
-# check awk
-type $AWK_CMD > /dev/null 2>&1 || 
-{ 
-    echo >&2 "Program awk is not found. Script terminated!"
-    exit 1
-}
 # check vim
 type $VIM_CMD > /dev/null 2>&1 || 
 { 
-    echo >&2 "Editor vim is not found. Script terminated!"
+    echo >&2 "Editor vim is not found. Abort!"
     exit 1
 }
 
-# create of overwrite the file including file list
+# create before and after files
 touch $BEFORE_FILE
-echo "# list of file names before changes are made:" > $BEFORE_FILE
+echo "# before:" > $BEFORE_FILE
 touch $AFTER_FILE
-echo "# put down the file names that you want to change to:" > $AFTER_FILE
+echo "# after:" > $AFTER_FILE
+if (( 0 != $? )); then
+    echo "Cannot create temp files on the current working directory. Abort!"
+    exit 1
+fi
 
 # parse command line options
 while getopts "Cqh?fv" OPTS; do
@@ -86,8 +82,8 @@ done
 
 # handle command line arguments
 if (( $# == 0 )); then
-    ls -l | $AWK_CMD '{print $9}' >> $BEFORE_FILE
-    ls -l | $AWK_CMD '{print $9}' >> $AFTER_FILE
+    ls -p --hide $BEFORE_FILE --hide $AFTER_FILE | grep -Ev '/' >> $BEFORE_FILE
+    ls -p --hide $BEFORE_FILE --hide $AFTER_FILE | grep -Ev '/' >> $AFTER_FILE
 else
     for ARG in $@
     do
@@ -106,21 +102,59 @@ else
 fi
 
 # start vim
-$VIM_CMD $AFTER_FILE "-c silent vsplit $BEFORE_FILE" \
-                     "-c silent set number" \
-                     "-c silent wincmd l" \
-                     "-c silent set number"
+$VIM_CMD "-X" \
+         "--noplugin" \
+         "-c silent set number" \
+         "-c silent edit $AFTER_FILE" \
+         "-c silent vsplit $BEFORE_FILE" \
+         "-c silent wincmd l" \
+         "-c silent set nowrap" 
 
 if (( $? != 0 )); then
     echo "Error when exiting vim. Abort!"
     exit 1;
 fi
 
-# trim empty and header lines
-$AWK_CMD 'NF && $1!~/^\#/' $BEFORE_FILE > $TMP_FILE && $MV_CMD $TMP_FILE $BEFORE_FILE
-$AWK_CMD 'NF && $1!~/^\#/' $AFTER_FILE  > $TMP_FILE && $MV_CMD $TMP_FILE $AFTER_FILE
+# trim leading and trailing white spaces, blank lines, and lines beginning with the token '#'
+#
+# vim options
+#         "-X"                 do not connect to X server
+#         "--noplugin"         do not load plugins
+#         "-e" \               start with ex mode
+#         "-s" \               silent mode, requires the option '-e' given before
+#         "-C" \               compatible (vi) mode 
+#         "-c %s/\s\+$//" \    remove trailing white spaces for each line
+#         "-c %s/^\s\+//" \    remove leading whit spaces for each line
+#         "-c g/^$/d" \        remove blank lines
+#         "-c g/^#/d" \        remove '#' lines
+#         "-c wq"              write buffer and quite
+$VIM_CMD $BEFORE_FILE \
+         "-X" \
+         "--noplugin" \
+         "-e" \
+         "-s" \
+         "-C" \
+         "-c %s/\s\+$//" \
+         "-c %s/^\s\+//" \
+         "-c g/^$/d" \
+         "-c g/^#/d" \
+         "-c wq"
+BEFORE_LINE_NUMBER=$(wc -l $BEFORE_FILE | cut -d" " -f1)
 
-if (( $? == 0 )); then
+$VIM_CMD $AFTER_FILE \
+         "-X" \
+         "--noplugin" \
+         "-e" \
+         "-s" \
+         "-C" \
+         "-c %s/\s\+$//" \
+         "-c %s/^\s\+//" \
+         "-c g/^$/d" \
+         "-c g/^#/d" \
+         "-c wq"
+AFTER_LINE_NUMBER=$(wc -l $AFTER_FILE | cut -d" " -f1)
+
+if [ $BEFORE_LINE_NUMBER == $AFTER_LINE_NUMBER ]; then
     exec 6<$BEFORE_FILE
     while read -r AFTER_LINE; do
         read -r BEFORE_LINE <&6
@@ -155,15 +189,15 @@ if (( $? == 0 )); then
 
     done <$AFTER_FILE
 else
-    if [ "true" != $FLAG_QUIET ]; then 
-        echo "Script execution failed."
-    fi
+    echo "Line mismatching in files. Abort!"
     exit 1
 fi
 
 if [ "true" != $FLAG_QUIET ]; then 
     echo "Removing temporary files ..."
 fi
-$RM_CMD $OPTION_VERBOSE $AFTER_FILE $BEFORE_FILE $TMP_FILE
+$RM_CMD $OPTION_VERBOSE $AFTER_FILE $BEFORE_FILE
+if [ "true" != $FLAG_QUIET ]; then 
+    echo "All set !"
+fi
 exit 0
-
