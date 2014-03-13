@@ -1,7 +1,6 @@
 younameit
 =========
 
-scripted utility for renaming batch files
+bash script for file renaming 
 
-- requires gnu awk or similar awk utility
 - requires command-line editor VIM
