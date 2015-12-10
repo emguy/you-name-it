@@ -7,7 +7,7 @@ bash script for file renaming
 
 usage: 
 
-    younameit [-hfqC] files_names ... 
+    younameit [-hfqv] files_names ... 
 
         -h show this help text 
         
