@@ -1,4 +1,4 @@
-younameit
+# younameit
 
 This simple command-line utility renames batched files using the editing power of Vim editor according to your specified patterns. To use this program, you might have Vim enabled on your console.
 
