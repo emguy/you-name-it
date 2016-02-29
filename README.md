@@ -1,9 +1,10 @@
 younameit
-=========
 
-bash script for file renaming utilizing the editing power of VIM.
+This simple command-line utility renames batched files using the editing power of Vim editor according to your specified patterns. To use this program, you might have Vim enabled on your console.
 
-- requires the command-line editor VIM
+## Requirement
+
+- It requires the command-line editor VIM.
 
 ##usage: 
 
