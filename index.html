@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <title>You-name-it by emguy</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>You-name-it</h1>
+        <h2>This utility renames the files in batch according to user specified patterns (Bash)</h2>
+
+        <section id="downloads">
+          <a href="https://github.com/emguy/you-name-it/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/emguy/you-name-it/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/emguy/you-name-it" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>
+<a id="younameit" class="anchor" href="#younameit" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>younameit</h1>
+
+<p>This simple command-line utility renames batched files using the editing power of Vim editor according to your specified patterns. To use this program, you might have Vim enabled on your console.</p>
+
+<h2>
+<a id="requirement" class="anchor" href="#requirement" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirement</h2>
+
+<ul>
+<li>It requires the command-line editor VIM.</li>
+</ul>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>usage:</h2>
+
+<pre><code>younameit [-hfqv] files_names ... 
+
+    -h show this help text 
+
+    -v show verion imformation 
+
+    -f enable file overwrite
+
+    -q quiet mode which suppresses all console messages
+</code></pre>
+
+<h2>
+<a id="example" class="anchor" href="#example" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>example:</h2>
+
+<pre><code>younameit foo*.txt
+
+| 1  foo1.txt             | ~  1  bar1.txt           |
+| 2  foo1.txt             | ~  2  bar2.txt           |
+| 3  foo1.txt             | ~  3  bar3.txt           |
+| 4  foo1.txt             | ~  4  bar4.txt           |
+| 5  foo1.txt             | ~  5  bar5.txt           |
+| 6  foo1.txt             | ~  6  bar6.txt           |
+| 7                       | ~  7                     |
+| 8                       | ~  8                     |
+| ~                       | ~  ~                     |
+| ~                       | ~  ~                     |
+| ~                       | ~  ~                     |
+| ~                       | ~  ~                     |
+| ~                       | ~  ~                     |
+|younameit.before 1,1 all |younameit.after   1,1 all |
+</code></pre>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
